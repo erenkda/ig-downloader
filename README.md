@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InstaSave — Instagram Downloader
 
-## Getting Started
+Instagram reels, story ve gönderilerini MP4 (video) ve PNG (görsel) olarak indirmenizi sağlayan Next.js uygulaması.
 
-First, run the development server:
+## Özellikler
+
+- Reels, post ve story bağlantı desteği
+- Otomatik format: video → MP4, görsel → PNG
+- Siyah-beyaz modern arayüz
+- Çoklu medya (carousel) desteği
+- Tek tıkla veya toplu indirme
+
+## Kurulum
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Kullanım
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Instagram'dan reels, story veya gönderi bağlantısını kopyalayın
+2. Bağlantıyı kutuya yapıştırın
+3. **İndir** butonuna tıklayın
+4. Önizlemeden medyayı indirin
 
-## Learn More
+### Desteklenen bağlantı formatları
 
-To learn more about Next.js, take a look at the following resources:
+- `https://www.instagram.com/reel/SHORTCODE/`
+- `https://www.instagram.com/p/SHORTCODE/`
+- `https://www.instagram.com/stories/KULLANICI/STORY_ID/`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notlar
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Yalnızca **halka açık** içerikler desteklenir
+- Gizli hesapların story ve gönderileri indirilemez
+- Süresi dolmuş story'ler erişilemez olabilir
+- Instagram API değişiklikleri indirmeyi etkileyebilir
 
-## Deploy on Vercel
+## Teknolojiler
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS 4
+- [btch-downloader](https://github.com/hostinger-bot/btch-downloader) — Instagram medya çıkarma (`igdl`)
