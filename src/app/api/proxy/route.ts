@@ -3,6 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+function getContentType(filename: string, upstream: string | null): string {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  if (ext === "mp4") return "video/mp4";
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  return upstream ?? "application/octet-stream";
+}
+
+function buildContentDisposition(filename: string): string {
+  const safe = filename.replace(/[^\w.\-() ]/g, "_");
+  return `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
 export async function GET(request: NextRequest) {
   const mediaUrl = request.nextUrl.searchParams.get("url");
   const filename = request.nextUrl.searchParams.get("filename") ?? "download";
@@ -38,15 +52,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const contentType =
-      response.headers.get("content-type") ?? "application/octet-stream";
+    const upstreamType = response.headers.get("content-type");
+    const contentType = getContentType(filename, upstreamType);
     const buffer = await response.arrayBuffer();
 
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": buildContentDisposition(filename),
         "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch {

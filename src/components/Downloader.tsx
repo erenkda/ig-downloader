@@ -7,6 +7,10 @@ import {
   type InstagramResult,
   type MediaItem,
 } from "@/lib/instagram";
+import {
+  buildProxyUrl,
+  triggerDownloadAll,
+} from "@/lib/download";
 
 const CONTENT_LABELS: Record<ContentType, string> = {
   post: "Gönderi",
@@ -63,53 +67,9 @@ function MediaCard({
   onCopy: (url: string) => void;
 }) {
   const filename = buildFilename(contentType, item.type, index, username);
-  const downloadUrl = `/api/proxy?url=${encodeURIComponent(item.url)}&filename=${encodeURIComponent(filename)}`;
+  const downloadUrl = buildProxyUrl(item.url, filename);
   const previewUrl =
     item.type === "video" && item.thumbnail ? item.thumbnail : item.url;
-
-  const handleDownload = async () => {
-    const response = await fetch(downloadUrl);
-    if (!response.ok) throw new Error("İndirme başarısız");
-
-    if (item.type === "image") {
-      const blob = await response.blob();
-      const bitmap = await createImageBitmap(blob);
-      const canvas = document.createElement("canvas");
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Görsel işlenemedi");
-      ctx.drawImage(bitmap, 0, 0);
-      bitmap.close();
-
-      const pngBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error("PNG oluşturulamadı"))),
-          "image/png"
-        );
-      });
-
-      const objectUrl = URL.createObjectURL(pngBlob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
-      return;
-    }
-
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(objectUrl);
-  };
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-white/25 hover:bg-white/[0.06]">
@@ -151,14 +111,16 @@ function MediaCard({
           >
             Linki Kopyala
           </button>
-          <button
-            type="button"
-            onClick={() => void handleDownload()}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95"
+          <a
+            href={downloadUrl}
+            download={filename}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95"
           >
             <DownloadIcon />
             İndir
-          </button>
+          </a>
         </div>
       </div>
     </div>
@@ -217,47 +179,22 @@ export default function Downloader() {
     }
   };
 
-  const downloadAll = async () => {
+  const downloadAll = () => {
     if (!result) return;
-    for (const [index, item] of result.items.entries()) {
-      const filename = buildFilename(
-        result.contentType,
-        item.type,
-        index,
-        result.username
-      );
-      const response = await fetch(
-        `/api/proxy?url=${encodeURIComponent(item.url)}&filename=${encodeURIComponent(filename)}`
-      );
-      if (!response.ok) continue;
-
-      let blob = await response.blob();
-
-      if (item.type === "image") {
-        const bitmap = await createImageBitmap(blob);
-        const canvas = document.createElement("canvas");
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(bitmap, 0, 0);
-          blob =
-            (await new Promise<Blob | null>((resolve) =>
-              canvas.toBlob(resolve, "image/png")
-            )) ?? blob;
-        }
-        bitmap.close();
-      }
-
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
-    }
+    void triggerDownloadAll(
+      result.items.map((item, index) => ({
+        url: buildProxyUrl(
+          item.url,
+          buildFilename(result.contentType, item.type, index, result.username)
+        ),
+        filename: buildFilename(
+          result.contentType,
+          item.type,
+          index,
+          result.username
+        ),
+      }))
+    );
   };
 
   return (
