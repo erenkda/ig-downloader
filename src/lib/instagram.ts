@@ -1,20 +1,13 @@
 import { igdl } from "btch-downloader";
+import type {
+  ContentType,
+  MediaItem,
+  MediaResult,
+  MediaType,
+} from "@/lib/types";
 
-export type MediaType = "video" | "image";
-export type ContentType = "post" | "reel" | "story";
-
-export interface MediaItem {
-  url: string;
-  type: MediaType;
-  thumbnail?: string;
-}
-
-export interface InstagramResult {
-  contentType: ContentType;
-  username?: string;
-  caption?: string;
-  items: MediaItem[];
-}
+export type { ContentType, MediaItem, MediaType };
+export type InstagramResult = MediaResult;
 
 interface IgdlResultItem {
   url?: string;
@@ -188,7 +181,7 @@ function mapIgdlToItems(data: IgdlResponse): MediaItem[] {
 
 export async function fetchInstagramMedia(
   inputUrl: string
-): Promise<InstagramResult> {
+): Promise<MediaResult> {
   const parsed = parseInstagramUrl(inputUrl);
   if (!parsed) {
     throw new Error("Geçersiz Instagram bağlantısı");
@@ -211,24 +204,9 @@ export async function fetchInstagramMedia(
   }
 
   return {
+    platform: "instagram",
     contentType: parsed.contentType,
     username: parsed.username,
     items,
   };
-}
-
-export function getFileExtension(type: MediaType): string {
-  return type === "video" ? "mp4" : "png";
-}
-
-export function buildFilename(
-  contentType: ContentType,
-  type: MediaType,
-  index: number,
-  username?: string
-): string {
-  const ext = getFileExtension(type);
-  const prefix = username ? `${username}_` : "";
-  const suffix = index > 0 ? `_${index + 1}` : "";
-  return `${prefix}instagram_${contentType}${suffix}.${ext}`;
 }

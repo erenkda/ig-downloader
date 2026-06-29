@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchInstagramMedia } from "@/lib/instagram";
+import { fetchMedia } from "@/lib/fetch-media";
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,12 +8,12 @@ export async function POST(request: NextRequest) {
 
     if (!url || typeof url !== "string") {
       return NextResponse.json(
-        { error: "Instagram bağlantısı gerekli" },
+        { error: "Instagram veya TikTok bağlantısı gerekli" },
         { status: 400 }
       );
     }
 
-    const result = await fetchInstagramMedia(url);
+    const result = await fetchMedia(url);
     return NextResponse.json(result);
   } catch (error) {
     const message =

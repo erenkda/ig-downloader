@@ -13,10 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "instagram kaydet",
+  title: "InstaSave — Instagram & TikTok İndirici",
   description:
-    "instagram story ve reels indirici",
-  keywords: ["instagram", "downloader", "reels", "story", "mp4", "indirici", "instagram kaydet"],
+    "Instagram reels, story ve TikTok videolarını filigransız MP4 olarak indirin.",
+  keywords: [
+    "instagram",
+    "tiktok",
+    "downloader",
+    "reels",
+    "story",
+    "mp4",
+    "filigransız",
+    "indirici",
+  ],
 };
 
 export default function RootLayout({

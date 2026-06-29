@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   buildFilename,
   type ContentType,
-  type InstagramResult,
   type MediaItem,
-} from "@/lib/instagram";
-import {
-  buildProxyUrl,
-  triggerDownloadAll,
-} from "@/lib/download";
+  type MediaResult,
+  type Platform,
+} from "@/lib/types";
+import { buildProxyUrl, triggerDownloadAll } from "@/lib/download";
 
 const CONTENT_LABELS: Record<ContentType, string> = {
   post: "Gönderi",
   reel: "Reels",
   story: "Story",
+  tiktok: "TikTok",
 };
+
+const PLATFORM_BADGES: { platform: Platform; types: ContentType[] }[] = [
+  { platform: "instagram", types: ["reel", "post", "story"] },
+  { platform: "tiktok", types: ["tiktok"] },
+];
 
 function DownloadIcon() {
   return (
@@ -56,24 +60,28 @@ function LoaderIcon() {
 function MediaCard({
   item,
   index,
-  contentType,
-  username,
+  result,
   onCopy,
 }: {
   item: MediaItem;
   index: number;
-  contentType: ContentType;
-  username?: string;
+  result: MediaResult;
   onCopy: (url: string) => void;
 }) {
-  const filename = buildFilename(contentType, item.type, index, username);
+  const filename = buildFilename(
+    result.contentType,
+    item.type,
+    index,
+    result.username,
+    result.platform
+  );
   const downloadUrl = buildProxyUrl(item.url, filename);
   const previewUrl =
     item.type === "video" && item.thumbnail ? item.thumbnail : item.url;
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-all duration-300 hover:border-white/25 hover:bg-white/[0.06]">
-      <div className="aspect-square overflow-hidden bg-black">
+      <div className="aspect-[9/16] max-h-[480px] overflow-hidden bg-black sm:aspect-square sm:max-h-none">
         {item.type === "video" ? (
           <video
             src={item.url}
@@ -93,11 +101,14 @@ function MediaCard({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 p-4">
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider text-white/70">
             {item.type === "video" ? "MP4" : "PNG"}
           </span>
+          {result.platform === "tiktok" && (
+            <span className="text-xs text-white/40">Filigransız</span>
+          )}
           {index > 0 && (
             <span className="text-xs text-white/40">#{index + 1}</span>
           )}
@@ -116,7 +127,7 @@ function MediaCard({
             download={filename}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-black transition-all hover:bg-white/90 active:scale-95 sm:flex-none"
           >
             <DownloadIcon />
             İndir
@@ -127,11 +138,21 @@ function MediaCard({
   );
 }
 
+const emptySubscribe = () => () => {};
+
+function useIsClient() {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
 export default function Downloader() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<InstagramResult | null>(null);
+  const [result, setResult] = useState<MediaResult | null>(null);
+  const isClient = useIsClient();
+
+  const isSubmitDisabled =
+    !isClient || loading || url.trim().length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +175,7 @@ export default function Downloader() {
         throw new Error(data.error ?? "Bir hata oluştu");
       }
 
-      setResult(data as InstagramResult);
+      setResult(data as MediaResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu");
     } finally {
@@ -185,13 +206,20 @@ export default function Downloader() {
       result.items.map((item, index) => ({
         url: buildProxyUrl(
           item.url,
-          buildFilename(result.contentType, item.type, index, result.username)
+          buildFilename(
+            result.contentType,
+            item.type,
+            index,
+            result.username,
+            result.platform
+          )
         ),
         filename: buildFilename(
           result.contentType,
           item.type,
           index,
-          result.username
+          result.username,
+          result.platform
         ),
       }))
     );
@@ -200,7 +228,7 @@ export default function Downloader() {
   return (
     <div className="flex w-full max-w-3xl flex-col items-center gap-4">
       <header className="text-center">
-        <div className="mb-6 inline-flex items-center gap-3">
+        <div className="mb-4 inline-flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/5">
             <svg
               width="24"
@@ -215,20 +243,29 @@ export default function Downloader() {
               <circle cx="17.5" cy="6.5" r="1.5" fill="white" stroke="none" />
             </svg>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white ">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">
             InstaSave
           </h1>
         </div>
+        <p className="text-sm text-white/40">
+          Instagram & TikTok — filigransız indirme
+        </p>
       </header>
 
       <form onSubmit={handleSubmit} className="w-full">
         <div className="relative flex flex-col gap-1 sm:flex-row">
           <div className="relative flex-1">
             <input
-              type="url"
+              type="text"
+              inputMode="url"
+              name="media-url"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.instagram.com/reel/..."
+              placeholder="Instagram veya TikTok linki yapıştırın..."
               className="w-full rounded-2xl border border-white/15 bg-white/[0.04] px-5 py-4 pr-24 text-sm text-white placeholder:text-white/30 outline-none transition-all focus:border-white/40 focus:bg-white/[0.07] sm:text-base"
               disabled={loading}
             />
@@ -242,7 +279,8 @@ export default function Downloader() {
           </div>
           <button
             type="submit"
-            disabled={loading || !url.trim()}
+            disabled={isSubmitDisabled}
+            suppressHydrationWarning
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-sm font-semibold text-black transition-all hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
           >
             {loading ? (
@@ -258,14 +296,16 @@ export default function Downloader() {
       </form>
 
       <div className="flex flex-wrap justify-center gap-3">
-        {(["reel", "post", "story"] as ContentType[]).map((type) => (
-          <span
-            key={type}
-            className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-white/40"
-          >
-            {CONTENT_LABELS[type]}
-          </span>
-        ))}
+        {PLATFORM_BADGES.flatMap(({ types }) =>
+          types.map((type) => (
+            <span
+              key={type}
+              className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-white/40"
+            >
+              {CONTENT_LABELS[type]}
+            </span>
+          ))
+        )}
       </div>
 
       {error && (
@@ -318,8 +358,7 @@ export default function Downloader() {
                 key={`${item.url}-${index}`}
                 item={item}
                 index={index}
-                contentType={result.contentType}
-                username={result.username}
+                result={result}
                 onCopy={copyLink}
               />
             ))}
